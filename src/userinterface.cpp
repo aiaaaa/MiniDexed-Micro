@@ -211,6 +211,15 @@ void CUserInterface::Process (void)
 	}
 }
 
+void CUserInterface::PrintAt(unsigned row, const char *text)
+{
+    // move cursor to line (row+1), column 1
+    char esc[32];
+    snprintf(esc, sizeof(esc), "\x1B[%u;1H", row+1);
+    LCDWrite(esc);
+    LCDWrite(text);
+}
+
 void CUserInterface::ParameterChanged (void)
 {
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
