@@ -90,8 +90,8 @@ public:
 #endif
 
 	// TODO - Leave this for uimenu.cpp for now, but it will need to be dynamic at some point...
-	static const unsigned LCDColumns = 16;		// HD44780 LCD
-	static const unsigned LCDRows = 2;
+	static const unsigned LCDColumns = 30;		// Pirate Pi Hat LCD
+	static const unsigned LCDRows = 15;
 
 public:
 	CConfig (FATFS *pFileSystem);
