@@ -106,12 +106,12 @@ void CSysExFileLoader::Load (bool bHeaderlessSysExVoices)
 
 void CSysExFileLoader::LoadBank (const char * sDirName, const char * sBankName, bool bHeaderlessSysExVoices, unsigned nSubDirCount)
 {
-	unsigned nBank;
+	//unsigned nBank; //removed to load full file name
 	size_t nLen = strlen (sBankName);
 	
 	if (   nLen < 5						// "[NNNN]N[_name].syx"
 		|| strcasecmp (&sBankName[nLen-4], ".syx") != 0
-		|| sscanf (sBankName, "%u", &nBank) != 1)
+		//|| sscanf (sBankName, "%u", &nBank) != 1) //commented this out to remove name check
 	{
 		// See if this is a subdirectory...
 		std::string Dirname (sDirName);
@@ -143,34 +143,55 @@ void CSysExFileLoader::LoadBank (const char * sDirName, const char * sBankName, 
 
 		return;
 	}
-	
+
+// assign next free slot (0-based)
+unsigned nBankIdx = m_nBanksLoaded++;
+if (nBankIdx > MaxVoiceBankID)
+{
+    LOGWARN("Too many banks: %s", sBankName);
+    return;
+}
+
+// allocate storage for the bank
+m_pVoiceBank[nBankIdx] = new TVoiceBank;
+assert(m_pVoiceBank[nBankIdx]);
+assert(sizeof(TVoiceBank) == VoiceSysExHdrSize + VoiceSysExSize);
+
+// build full path in one go
+std::string Filename = std::string(sDirName) + "/" + sBankName;
+
+
 	// File and UI handling requires banks to be 1..indexed.
 	// Internally (and via MIDI) we need 0..indexed.
 	// Any mention of a BankID internally is assumed to be 0..indexed.
-	unsigned nBankIdx = nBank - 1;
+	// unsigned nBankIdx = nBank - 1;
 
-	// BankIdx goes from 0 to MaxVoiceBankID inclusive
-	if (nBankIdx > MaxVoiceBankID)
-	{
-		LOGWARN ("Bank #%u is not supported", nBank);
+	// // BankIdx goes from 0 to MaxVoiceBankID inclusive
+	// if (nBankIdx > MaxVoiceBankID)
+	// {
+	// 	LOGWARN ("Bank #%u is not supported", nBank);
 
-		return;
-	}
+	// 	return;
+	// }
 
-	if (m_pVoiceBank[nBankIdx])
-	{
-		LOGWARN ("Bank #%u already loaded", nBank);
+	// if (m_pVoiceBank[nBankIdx])
+	// {
+	// 	LOGWARN ("Bank #%u already loaded", nBank);
 
-		return;
-	}
+	// 	return;
+	// }
 
-	m_pVoiceBank[nBankIdx] = new TVoiceBank;
-	assert (m_pVoiceBank[nBankIdx]);
-	assert (sizeof(TVoiceBank) == VoiceSysExHdrSize + VoiceSysExSize);
+	// m_pVoiceBank[nBankIdx] = new TVoiceBank;
+	// assert (m_pVoiceBank[nBankIdx]);
+	// assert (sizeof(TVoiceBank) == VoiceSysExHdrSize + VoiceSysExSize);
 
-	std::string Filename (sDirName);
-	Filename += "/";
-	Filename += sBankName;
+	// std::string Filename (sDirName);
+	// Filename += "/";
+	// Filename += sBankName;
+
+
+
+
 
 	FILE *pFile = fopen (Filename.c_str (), "rb");
 	if (pFile)
@@ -248,29 +269,11 @@ void CSysExFileLoader::LoadBank (const char * sDirName, const char * sBankName, 
 	}
 }
 
-std::string CSysExFileLoader::GetBankName (unsigned nBankID)
+std::string CSysExFileLoader::GetBankName(unsigned nBankID)
 {
-	if (nBankID <= MaxVoiceBankID)
-	{
-		std::string Result = m_BankFileName[nBankID];
-
-		size_t nLen = Result.length ();
-		if (nLen > 4)
-		{
-			Result.resize (nLen-4);		// remove file extension
-
-			unsigned nBank;
-			char BankName[30+1];
-			if (sscanf (Result.c_str (), "%u_%30s", &nBank, BankName) == 2)
-			{
-				Result = BankName;
-
-				return Result;
-			}
-		}
-	}
-
-	return "NO NAME";
+    if (nBankID <= MaxVoiceBankID && IsValidBank(nBankID))
+        return m_BankFileName[nBankID];  // full filename, e.g. "0001_MyCoolPatch.syx"
+    return "NO NAME";
 }
 
 std::string CSysExFileLoader::GetVoiceName (unsigned nBankID, unsigned nVoiceID)
