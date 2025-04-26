@@ -356,6 +356,8 @@ CUIMenu::CUIMenu (CUserInterface *pUI, CMiniDexed *pMiniDexed, CConfig *pConfig)
 	m_nCurrentSelection (0),
 	m_nCurrentParameter (0),
 	m_nCurrentMenuDepth (0)
+ 	m_nListOffset       (0),   // already 0 in header, but explicit here
+ 	m_nCurrentBank      (0)    // explicitly zeroized
 {
 	assert (m_pConfig);
 	m_nToneGenerators = m_pConfig->GetToneGenerators();
