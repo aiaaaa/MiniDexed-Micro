@@ -145,7 +145,7 @@ void CSysExFileLoader::LoadBank (const char * sDirName, const char * sBankName, 
 	}
 
 // assign next free slot (0-based)
-unsigned nBankIdx = m_nBanksLoaded++;
+unsigned nBankIdx = m_nBanksLoaded;
 if (nBankIdx > MaxVoiceBankID)
 {
     LOGWARN("Too many banks: %s", sBankName);
