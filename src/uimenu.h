@@ -135,7 +135,9 @@ private:
 	CUserInterface *m_pUI;
 	CMiniDexed *m_pMiniDexed;
 	CConfig *m_pConfig;
-	
+
+	unsigned         m_nListOffset = 0;    // index of first bank shown
+
 	unsigned m_nToneGenerators;
 
 	const TMenuItem *m_pParentMenu;
