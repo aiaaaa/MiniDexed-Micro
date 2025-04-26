@@ -26,6 +26,8 @@
 #include <assert.h>
 #include <circle/logger.h>
 #include "voices.c"
+#include <vector>
+#include <algorithm>
 
 LOGMODULE ("syxfile");
 
@@ -81,27 +83,44 @@ CSysExFileLoader::~CSysExFileLoader (void)
 	}
 }
 
-void CSysExFileLoader::Load (bool bHeaderlessSysExVoices)
+void CSysExFileLoader::Load(bool bHeaderlessSysExVoices)
 {
-	m_nNumHighestBank = 0;
-	m_nBanksLoaded = 0;
+    m_nNumHighestBank = 0;
+    m_nBanksLoaded    = 0;
 
-    DIR *pDirectory = opendir (m_DirName.c_str ());
-	if (!pDirectory)
-	{
-		LOGWARN ("Directory %s not found", m_DirName.c_str ());
+    DIR* pDirectory = opendir(m_DirName.c_str());
+    if (!pDirectory)
+    {
+        LOGWARN("Directory %s not found", m_DirName.c_str());
+        return;
+    }
 
-		return;
-	}
+    // Gather all filenames
+    std::vector<std::string> entries;
+    dirent* pEntry;
+    while ((pEntry = readdir(pDirectory)) != nullptr)
+    {
+        entries.emplace_back(pEntry->d_name);
+    }
+    closedir(pDirectory);
 
-	dirent *pEntry;
-	while ((pEntry = readdir (pDirectory)) != nullptr)
-	{
-		LoadBank(m_DirName.c_str (), pEntry->d_name, bHeaderlessSysExVoices, 0);
-	}
-	LOGDBG ("%u Banks loaded. Highest Bank loaded: #%u", m_nBanksLoaded, m_nNumHighestBank+1);
+    // Sort by numeric prefix (so "1","2","10" order correctly)
+    std::sort(entries.begin(), entries.end(),
+        [](const std::string &a, const std::string &b) {
+            unsigned na = strtoul(a.c_str(), nullptr, 10);
+            unsigned nb = strtoul(b.c_str(), nullptr, 10);
+            return na < nb;
+        });
 
-	closedir (pDirectory);
+    // Load each bank in sorted order
+    for (const auto &name : entries)
+    {
+        LoadBank(m_DirName.c_str(), name.c_str(), bHeaderlessSysExVoices, 0);
+    }
+
+    LOGDBG("%u Banks loaded. Highest Bank loaded: #%u",
+           m_nBanksLoaded,
+           m_nNumHighestBank + 1);
 }
 
 void CSysExFileLoader::LoadBank (const char * sDirName, const char * sBankName, bool bHeaderlessSysExVoices, unsigned nSubDirCount)
