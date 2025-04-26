@@ -609,41 +609,45 @@ void CUIMenu::EditVoiceBankNumber(CUIMenu *pUIMenu, TMenuEvent Event)
     // grab UI and loader from the passed-in menu pointer
     CUserInterface   *ui     = pUIMenu->m_pUI;
     CSysExFileLoader *loader = pUIMenu->m_pMiniDexed->GetSysExFileLoader();
+    unsigned total = loader->GetNumHighestBank() + 1;             // total banks
+    unsigned rows  = ui->m_pConfig->GetLCDRows();                // e.g. 15
+    unsigned sel   = pUIMenu->m_nCurrentBank;                    // current selection
+    unsigned &off  = pUIMenu->m_nListOffset;                     // viewport offset
 
-    unsigned total  = loader->GetNumHighestBank() + 1;  // total banks
-    unsigned rows   = ui->m_pConfig->GetLCDRows();     // e.g. 15
-    unsigned sel    = pUIMenu->m_nCurrentBank;         // current selection
-    unsigned &off   = pUIMenu->m_nListOffset;         // viewport offset
-
-    // 1) handle events: update vs step up/down
+    // 1) handle events: update vs step up/down vs select
     switch (Event)
     {
-        case MenuEventUpdate:
-        case MenuEventUpdateParameter:
-            // just redraw
-            break;
+    case MenuEventUpdate:
+    case MenuEventUpdateParameter:
+        // just redraw
+        break;
 
-        case MenuEventStepDown:
-            if (sel + 1 < total)
-                ++sel;
-            if (sel >= off + (rows - 1))
-                off = sel - (rows - 1) + 1;
-            break;
+    case MenuEventStepDown:
+        if (sel + 1 < total)        ++sel;
+        if (sel >= off + (rows - 1)) off = sel - (rows - 1) + 1;
+        break;
 
-        case MenuEventStepUp:
-            if (sel > 0)
-                --sel;
-            if (sel < off)
-                off = sel;
-            break;
+    case MenuEventStepUp:
+        if (sel > 0)                --sel;
+        if (sel < off)               off = sel;
+        break;
 
-        default:
-            // ignore other events
-            return;
+    case MenuEventSelect:
+        // apply the chosen bank to all active tone generators
+        for (unsigned tg = 0; tg < pUIMenu->m_nToneGenerators; ++tg)
+            pUIMenu->m_pMiniDexed->BankSelect(sel, tg);
+        // pop back to the previous menu
+        pUIMenu->EventHandler(MenuEventBack);
+        return;
+
+    default:
+        // ignore other events
+        return;
     }
+
     // commit back to the menu state
-    pUIMenu->m_nCurrentBank   = sel;
-    pUIMenu->m_nListOffset    = off;
+    pUIMenu->m_nCurrentBank  = sel;
+    pUIMenu->m_nListOffset   = off;
 
     // 2) clear screen
     ui->LCDWrite("\x1B[H\x1B[J");
@@ -655,16 +659,13 @@ void CUIMenu::EditVoiceBankNumber(CUIMenu *pUIMenu, TMenuEvent Event)
     for (unsigned line = 1; line < rows; ++line)
     {
         unsigned idx = off + (line - 1);
-        if (idx >= total)
-            break;
+        if (idx >= total) break;
 
-        // prefix the selected one
-        std::string entry = (idx == sel ? "> " : "  ")
-                          + std::to_string(idx + 1)
-                          + "="
-                          + loader->GetBankName(idx);
-
-        // pad or trim to full width
+        std::string entry =
+            (idx == sel ? "> " : " ")
+          + std::to_string(idx + 1)
+          + "="
+          + loader->GetBankName(idx);
         entry.resize(ui->m_pConfig->GetLCDColumns(), ' ');
         ui->PrintAt(line, entry.c_str());
     }
