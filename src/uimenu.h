@@ -137,7 +137,7 @@ private:
 	CConfig *m_pConfig;
 
 	unsigned         m_nListOffset = 0;    // index of first bank shown
-
+	unsigned m_nCurrentBank  = 0;   // currently selected bank
 	unsigned m_nToneGenerators;
 
 	const TMenuItem *m_pParentMenu;
