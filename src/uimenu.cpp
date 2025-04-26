@@ -621,7 +621,15 @@ void CUIMenu::EditVoiceBankNumber(CUIMenu *pUIMenu, TMenuEvent Event)
     case MenuEventUpdateParameter:
         // just redraw
         break;
-
+	    
+	case MenuEventEnter:
+        // center the list on the current bank when opening
+        if (sel >= rows - 1)
+            off = sel - (rows - 1) + 1;
+        else
+            off = 0;
+        break;
+	    
     case MenuEventStepDown:
         if (sel + 1 < total)        ++sel;
         if (sel >= off + (rows - 1)) off = sel - (rows - 1) + 1;
