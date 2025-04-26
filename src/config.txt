@@ -8,6 +8,8 @@ disable_splash=1
 force_eeprom_read=0
 gpu_mem=16
 disable_overscan=0
+dtoverlay=hifiberry-dac       // enable I²S audio DAC
+gpio=25=op,dh                 // power & data for Pirate Audio board
 
 #
 # Use 64-bit for RPi 3, 4, 400, 5 and Zero 2, and 32-bit for all other models
