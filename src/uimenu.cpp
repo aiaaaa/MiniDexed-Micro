@@ -602,50 +602,73 @@ void CUIMenu::EditGlobalParameter (CUIMenu *pUIMenu, TMenuEvent Event)
 				      nValue > rParam.Minimum, nValue < rParam.Maximum);
 }
 
-void CUIMenu::EditVoiceBankNumber (CUIMenu *pUIMenu, TMenuEvent Event)
+void CUIMenu::EditVoiceBankNumber(CUIMenu *pUIMenu, TMenuEvent Event)
 {
-	unsigned nTG = pUIMenu->m_nMenuStackParameter[pUIMenu->m_nCurrentMenuDepth-1];
+    // grab UI and loader from the passed-in menu pointer
+    CUserInterface   *ui     = pUIMenu->m_pUI;
+    CSysExFileLoader *loader = pUIMenu->m_pMiniDexed->GetSysExFileLoader();
 
-	int nValue = pUIMenu->m_pMiniDexed->GetTGParameter (CMiniDexed::TGParameterVoiceBank, nTG);
+    unsigned total  = loader->GetNumHighestBank() + 1;  // total banks
+    unsigned rows   = ui->m_pConfig->GetLCDRows();     // e.g. 15
+    unsigned sel    = pUIMenu->m_nCurrentBank;         // current selection
+    unsigned &off   = pUIMenu->m_nListOffset;         // viewport offset
 
-	switch (Event)
-	{
-	case MenuEventUpdate:
-	case MenuEventUpdateParameter:
-		break;
+    // 1) handle events: update vs step up/down
+    switch (Event)
+    {
+        case MenuEventUpdate:
+        case MenuEventUpdateParameter:
+            // just redraw
+            break;
 
-	case MenuEventStepDown:
-		nValue = pUIMenu->m_pMiniDexed->GetSysExFileLoader ()->GetNextBankDown(nValue);
-		pUIMenu->m_pMiniDexed->SetTGParameter (
-			CMiniDexed::TGParameterVoiceBank, nValue, nTG);
-		break;
+        case MenuEventStepDown:
+            if (sel + 1 < total)
+                ++sel;
+            if (sel >= off + (rows - 1))
+                off = sel - (rows - 1) + 1;
+            break;
 
-	case MenuEventStepUp:
-		nValue = pUIMenu->m_pMiniDexed->GetSysExFileLoader ()->GetNextBankUp(nValue);
-		pUIMenu->m_pMiniDexed->SetTGParameter (
-			CMiniDexed::TGParameterVoiceBank, nValue, nTG);
-		break;
+        case MenuEventStepUp:
+            if (sel > 0)
+                --sel;
+            if (sel < off)
+                off = sel;
+            break;
 
-	case MenuEventPressAndStepDown:
-	case MenuEventPressAndStepUp:
-		pUIMenu->TGShortcutHandler (Event);
-		return;
+        default:
+            // ignore other events
+            return;
+    }
+    // commit back to the menu state
+    pUIMenu->m_nCurrentBank   = sel;
+    pUIMenu->m_nListOffset    = off;
 
-	default:
-		return;
-	}
+    // 2) clear screen
+    ui->LCDWrite("\x1B[H\x1B[J");
 
-	string TG ("TG");
-	TG += to_string (nTG+1);
+    // 3) draw header
+    ui->PrintAt(0, "Select Bank:");
 
-	string Value =   to_string (nValue+1) + "="
-		       + pUIMenu->m_pMiniDexed->GetSysExFileLoader ()->GetBankName (nValue);
+    // 4) draw banks one per line, lines 1..rows-1
+    for (unsigned line = 1; line < rows; ++line)
+    {
+        unsigned idx = off + (line - 1);
+        if (idx >= total)
+            break;
 
-	pUIMenu->m_pUI->DisplayWrite (TG.c_str (),
-				      pUIMenu->m_pParentMenu[pUIMenu->m_nCurrentMenuItem].Name,
-				      Value.c_str (),
-				      nValue > 0, nValue < (int) CSysExFileLoader::MaxVoiceBankID);
+        // prefix the selected one
+        std::string entry = (idx == sel ? "> " : "  ")
+                          + std::to_string(idx + 1)
+                          + "="
+                          + loader->GetBankName(idx);
+
+        // pad or trim to full width
+        entry.resize(ui->m_pConfig->GetLCDColumns(), ' ');
+        ui->PrintAt(line, entry.c_str());
+    }
 }
+
+
 
 void CUIMenu::EditProgramNumber (CUIMenu *pUIMenu, TMenuEvent Event)
 {
